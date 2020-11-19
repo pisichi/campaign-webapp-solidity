@@ -1,0 +1,159 @@
+<html>
+
+<head>
+  <!-- CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css"
+    integrity="sha384-TX8t27EcRE3e/ihU7zmQxVncDAy5uIKz4rEkgIXeMed4M0jlfIDPvg6uqKI2xXr2" crossorigin="anonymous">
+
+  <!-- jQuery and JS bundle w/ Popper.js -->
+  <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"
+    integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj"
+    crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.bundle.min.js"
+    integrity="sha384-ho+j7jyWK8fNQe+A12Hb8AhRq26LrZ/JpcUGGOn+Y7RsweNrtN/tE3MoK7ZeZDyx"
+    crossorigin="anonymous"></script>
+
+  <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
+  <script>
+    const address = "0xC89B7aEcfEfA090bee0955eB0EFee494231d6Bd0";
+    const web3 = new Web3(Web3.givenProvider);
+
+    window.addEventListener('load', async () => {
+      if (typeof (web3) === 'undefined') {
+        //return console.log("Metamask is not installed");
+        alert("Metamask is not installed, you cannot use this app")
+      }
+      else {
+        window.ethereum.enable();
+        await getAccounts()
+      }
+
+    });
+    const abi = [{ "inputs": [{ "internalType": "uint256", "name": "minimum", "type": "uint256" }, { "internalType": "address", "name": "creator", "type": "address" }], "stateMutability": "payable", "type": "constructor" }, { "inputs": [{ "internalType": "uint256", "name": "index", "type": "uint256" }], "name": "approveRequest", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [{ "internalType": "address", "name": "", "type": "address" }], "name": "approvers", "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }], "stateMutability": "view", "type": "function" }, { "inputs": [], "name": "contribute", "outputs": [], "stateMutability": "payable", "type": "function" }, { "inputs": [{ "internalType": "string", "name": "description", "type": "string" }, { "internalType": "uint256", "name": "amount", "type": "uint256" }, { "internalType": "address", "name": "recipient", "type": "address" }], "name": "createRequest", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [{ "internalType": "uint256", "name": "index", "type": "uint256" }], "name": "finalizeRequest", "outputs": [], "stateMutability": "payable", "type": "function" }, { "inputs": [], "name": "manager", "outputs": [{ "internalType": "address", "name": "", "type": "address" }], "stateMutability": "view", "type": "function" }, { "inputs": [], "name": "minimumContribution", "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }], "stateMutability": "view", "type": "function" }, { "inputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }], "name": "requests", "outputs": [{ "internalType": "string", "name": "description", "type": "string" }, { "internalType": "uint256", "name": "amount", "type": "uint256" }, { "internalType": "address", "name": "recipient", "type": "address" }, { "internalType": "bool", "name": "complete", "type": "bool" }, { "internalType": "uint256", "name": "approvalCount", "type": "uint256" }], "stateMutability": "view", "type": "function" }];
+
+    let urlString = window.location.href
+    let url = new URL(urlString)
+    let campaignAddress = url.searchParams.get("address")
+
+    var campaign = new web3.eth.Contract(abi, campaignAddress);
+    var accounts;
+    async function getAccounts() {
+      accounts = await web3.eth.getAccounts();
+    }
+
+    var manager
+    getManager = async () => {
+      manager = await campaign.methods.manager().call()
+      document.getElementById('manager').innerHTML = manager
+      min = await campaign.methods.minimumContribution().call()
+      document.getElementById('minimumContribution').innerHTML = min
+      getRequest();
+    };
+
+    getRequest = async () => {
+      let element = "<table class='table'><thead class='thead-dark'><th>Index</th><th>Description</th><th>Amount</th><th>Status</th><th>Approval Count</th><th>Recipient</th><th></th></tr></thead>"
+      let index = 0;
+
+      while (true) {
+        try {
+          re = await campaign.methods.requests(index).call()
+          console.log(re)
+          console.log(re.description)
+
+          element += "<tr><td>" + index + "</td><td>" +
+            re.description + "</td><td>" +
+            re.amount + "wei" + "</td><td>" +
+            re.complete + "</td><td>" +
+            re.approvalCount + "</td><td>" +
+            re.recipient + "</td><td>" +
+            '<button type="button" class="btn btn-primary btn-sm mx-1" onclick="approve(' + index + ')">approve</button>' +
+            '<button type="button" class="btn btn-success btn-sm mx-1" onclick="finalize(' + index + ')">finalize</button>' +
+            "</td></tr>"
+          index += 1
+        }
+        catch (e) {
+          break;
+        }
+
+      }
+      element += "</table>"
+      document.getElementById("request").innerHTML = element
+    }
+
+    contribute = async () => {
+      amount = document.getElementById("amount").value;
+      const accounts = await web3.eth.getAccounts();
+      await campaign.methods.contribute().send({
+        from: accounts[0],
+        value: web3.utils.toWei(amount, "ether"),
+        gas: 1000000
+      });
+    };
+
+    createRequest = async () => {
+      //string memory description, uint amount, address recipient
+      desc = document.getElementById("description").value;
+      cona = document.getElementById("conamount").value;
+      addr = document.getElementById("address").value;
+      const accounts = await web3.eth.getAccounts();
+
+      await campaign.methods.createRequest(desc, cona, addr).send({
+        from: accounts[0],
+        gas: 1000000
+      });
+    }
+
+    approve = async (index) => {
+      await campaign.methods.approveRequest(index).send({ from: accounts[0], gas: 400000 }) 
+      console.log("approve call from index:" + index);
+    }
+
+    finalize = async (index) => {
+      await campaign.methods.finalizeRequest(index).send({ from: accounts[0], gas: 400000 }) 
+      console.log("call from index:" + index);
+    }
+
+  </script>
+</head>
+
+<body onload="getAccounts()">
+
+  <script>
+    getManager();
+  </script>
+
+  <nav class="navbar navbar-dark bg-dark text-white">
+    <h1 class="mx-auto"> Campaign Detail </h1>
+  </nav>
+  <div class="container-fluid">
+    <div class="card text-dark bg-light m-3 p-5">
+      <div class="row">
+        <div class="col-6">
+          <h3 class="my-2">
+            Contribute
+          </h3>
+          <input type="input" id="amount" placeholder="wei">
+          <button type="button" class="btn btn-primary" onclick="contribute()">contribute</button>
+        </div>
+        <div class="col-6">
+          <h3 class="my-2">
+            Create Request
+          </h3>
+          <input type="input" id="description" placeholder="description">
+          <input type="input" id="conamount" placeholder="amount (wei)">
+          <input type="input" id="address" placeholder="pay address">
+          <button type="button" class="btn btn-primary" onclick="createRequest()">createRequest</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="manager"></div>
+    <div id="minimumContribution"></div>
+    <div id="approversCount"></div>
+    <div id="request"></div>
+  </div>
+
+  </div>
+</body>
+
+</html>

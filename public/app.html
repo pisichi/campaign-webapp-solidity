@@ -1,0 +1,384 @@
+<html>
+  <head>
+    <!-- CSS -->
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css"
+      integrity="sha384-TX8t27EcRE3e/ihU7zmQxVncDAy5uIKz4rEkgIXeMed4M0jlfIDPvg6uqKI2xXr2"
+      crossorigin="anonymous"
+    />
+
+    <!-- jQuery and JS bundle w/ Popper.js -->
+    <script
+      src="https://code.jquery.com/jquery-3.5.1.slim.min.js"
+      integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.bundle.min.js"
+      integrity="sha384-ho+j7jyWK8fNQe+A12Hb8AhRq26LrZ/JpcUGGOn+Y7RsweNrtN/tE3MoK7ZeZDyx"
+      crossorigin="anonymous"
+    ></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
+
+    <!-- FontAwesome -->
+    <link
+      rel="stylesheet"
+      href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"
+    />
+
+    <script>
+      const address = "0xC89B7aEcfEfA090bee0955eB0EFee494231d6Bd0";
+      const web3 = new Web3(Web3.givenProvider);
+
+      window.addEventListener("load", async () => {
+        if (typeof web3 === "undefined") {
+          //return console.log("Metamask is not installed");
+          alert("Metamask is not installed, you cannot use this app");
+        } else {
+          window.ethereum.enable();
+          await getAccounts();
+        }
+      });
+      const abi = [
+        {
+          inputs: [
+            { internalType: "uint256", name: "minimum", type: "uint256" },
+          ],
+          name: "createCampaign",
+          outputs: [],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          inputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+          name: "deployedCampaigns",
+          outputs: [
+            { internalType: "contract Campaign", name: "", type: "address" },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [],
+          name: "getDeployedCampaigns",
+          outputs: [
+            {
+              internalType: "contract Campaign[]",
+              name: "",
+              type: "address[]",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+      ];
+      const abi2 = [
+        {
+          inputs: [
+            { internalType: "uint256", name: "minimum", type: "uint256" },
+            { internalType: "address", name: "creator", type: "address" },
+          ],
+          stateMutability: "payable",
+          type: "constructor",
+        },
+        {
+          inputs: [{ internalType: "uint256", name: "index", type: "uint256" }],
+          name: "approveRequest",
+          outputs: [],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          inputs: [{ internalType: "address", name: "", type: "address" }],
+          name: "approvers",
+          outputs: [{ internalType: "bool", name: "", type: "bool" }],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [],
+          name: "contribute",
+          outputs: [],
+          stateMutability: "payable",
+          type: "function",
+        },
+        {
+          inputs: [
+            { internalType: "string", name: "description", type: "string" },
+            { internalType: "uint256", name: "amount", type: "uint256" },
+            { internalType: "address", name: "recipient", type: "address" },
+          ],
+          name: "createRequest",
+          outputs: [],
+          stateMutability: "nonpayable",
+          type: "function",
+        },
+        {
+          inputs: [{ internalType: "uint256", name: "index", type: "uint256" }],
+          name: "finalizeRequest",
+          outputs: [],
+          stateMutability: "payable",
+          type: "function",
+        },
+        {
+          inputs: [],
+          name: "manager",
+          outputs: [{ internalType: "address", name: "", type: "address" }],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [],
+          name: "minimumContribution",
+          outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+          name: "requests",
+          outputs: [
+            { internalType: "string", name: "description", type: "string" },
+            { internalType: "uint256", name: "amount", type: "uint256" },
+            { internalType: "address", name: "recipient", type: "address" },
+            { internalType: "bool", name: "complete", type: "bool" },
+            { internalType: "uint256", name: "approvalCount", type: "uint256" },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+      ];
+      var campaignFactory = new web3.eth.Contract(abi, address);
+      var accounts;
+
+      async function getAccounts() {
+        accounts = await web3.eth.getAccounts();
+        document.getElementById("address").innerHTML = accounts;
+      }
+
+      createCampaign = async () => {
+        let minimum = document.getElementById("minimumAmount").value;
+        if (minimum === "") {
+          return;
+        }
+        console.log(minimum);
+        accounts = await web3.eth.getAccounts();
+        await campaignFactory.methods.createCampaign(minimum).send({
+          from: accounts[0],
+          gas: "4000000",
+        });
+        const deployedCampaigns = await campaignFactory.methods
+          .getDeployedCampaigns()
+          .call({
+            from: accounts[0],
+          });
+        console.log(deployedCampaigns);
+      };
+
+      getCampaign = async () => {
+        accounts = await web3.eth.getAccounts();
+        let campaign = await campaignFactory.methods
+          .getDeployedCampaigns()
+          .call({
+            from: accounts[0],
+          });
+
+        let element =
+          "<table class='table'><thead class='thead-dark'><th>Index</th><th>manager</th><th>minimum contrubution</th><th></th></tr></thead>";
+        let index = 1;
+
+        for (let campaignAddress of campaign) {
+          campaign = await new web3.eth.Contract(abi2, campaignAddress);
+
+          min = await campaign.methods.minimumContribution().call();
+          manager = await campaign.methods.manager().call();
+
+          element +=
+            "<tr " +
+            ' class="pop" data-container="body" data-toggle="tooltip" data-placement="top" title="' +
+            "contract address: " +
+            campaignAddress +
+            '"> <td>' +
+            index +
+            "</td><td>" +
+            manager +
+            "</td><td>" +
+            min +
+            "wei" +
+            "</td><td>" +
+            "<a href='campaign.html?address=" +
+            campaignAddress +
+            "' class='btn btn-info tablebutton'> <i class='fa fa-eye'></i> View</a></td></tr>";
+          index += 1;
+        }
+        element += "</table>";
+        document.getElementById("campaign").innerHTML = element;
+      };
+    </script>
+  </head>
+
+  <body onload="getAccounts()">
+    <script>
+      getCampaign();
+    </script>
+
+    <nav class="navbar navbar-dark bg-dark text-white">
+      <h1 class="mx-auto">Campaign Factory</h1>
+    </nav>
+
+    <div class="container-fluid">
+      <div
+        class="jumbotron jumbotron-fluid text-white jumbotron-image shadow"
+        style="
+          background-image: url(https://images.unsplash.com/photo-1552152974-19b9caf99137?fit=crop&w=1350&q=80);
+        "
+      >
+        <div class="container">
+          <h1 class="display-4">Smart Contract and Campaign</h1>
+          <p class="lead">
+          start your new campaign with Etherum smart contract
+          </p>
+          <small class="text-muted">Current Account: <a id="address"></a> </small>
+        </div>
+      </div>
+
+      <div class="row justify-content-center">
+        <div class="col-10">
+          <div class="table-wrapper shadow">
+            <div class="table-title">
+              <div class="row">
+                <div class="col-sm-8">
+                  <h2><b>Campaign</b> Lists</h2>
+                </div>
+                <div class="col-sm-4">
+                  <button
+                    type="button"
+                    class="btn btn-primary add-new"
+                    data-toggle="modal"
+                    data-target="#exampleModal"
+                  >
+                    <i class="fa fa-plus"></i> Create new Campaign
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="table-responsive px-2" id="campaign"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div
+        class="modal fade"
+        id="exampleModal"
+        tabindex="-1"
+        role="dialog"
+        aria-labelledby="exampleModalLabel"
+        aria-hidden="true"
+      >
+        <div class="modal-dialog" role="document">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="exampleModalLabel">
+                Create new Campaign
+              </h5>
+              <button
+                type="button"
+                class="close"
+                data-dismiss="modal"
+                aria-label="Close"
+              >
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+            <div class="modal-body">
+              <input
+                type="input"
+                id="minimumAmount"
+                placeholder="Enter minimum"
+              />
+            </div>
+            <div class="modal-footer">
+              <button
+                type="button"
+                class="btn btn-secondary"
+                data-dismiss="modal"
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                class="btn btn-primary"
+                onclick="createCampaign()"
+              >
+                Create
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+
+  <style>
+    body {
+      color: #404e67;
+      background: #a3adc2;
+    }
+
+    .container-fluid {
+      padding-right: 0;
+      padding-left: 0;
+      margin-right: auto;
+      margin-left: auto;
+    }
+
+    .jumbotron-image {
+      background-position: center center;
+      background-repeat: no-repeat;
+      background-size: cover;
+
+    }
+
+    .table-wrapper {
+      margin: 15px auto;
+      padding: 30px;
+      background: #f5f7fa;
+      border-radius: 50px;
+    }
+    .table-title {
+      padding-bottom: 15px;
+      margin: 0 0 10px;
+    }
+    .table-title h2 {
+      margin: 6px 0 0;
+      font-size: 35px;
+    }
+    .table-title .add-new {
+      float: right;
+      height: 40px;
+      font-weight: bold;
+      font-size: 20px;
+      text-shadow: none;
+      min-width: 120px;
+      border-radius: 50px;
+      line-height: 13px;
+    }
+    .fa {
+      margin-right: 4px;
+    }
+    .tablebutton {
+      float: right;
+      height: 30px;
+      font-weight: bold;
+      font-size: 12px;
+      text-shadow: none;
+      min-width: 100px;
+      border-radius: 50px;
+      line-height: 13px;
+    }
+  </style>
+</html>
