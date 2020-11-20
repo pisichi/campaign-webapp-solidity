@@ -186,7 +186,7 @@
           });
 
         let element =
-          "<table class='table'><thead class='thead-dark'><th>Index</th><th>manager</th><th>minimum contrubution</th><th></th></tr></thead>";
+          "<table class='table'><thead class='thead-dark'><th>Index</th><th>Address</th><th>Minimum contrubution</th><th></th></tr></thead>";
         let index = 1;
 
         for (let campaignAddress of campaign) {
@@ -200,13 +200,18 @@
             ' class="pop" data-container="body" data-toggle="tooltip" data-placement="top" title="' +
             "contract address: " +
             campaignAddress +
-            '"> <td>' +
+            '"> <td >' +
             index +
             "</td><td>" +
+            "<div class='col'> <div class='row'> <b class='text-primary'>" + "manager:&nbsp </b>" +
             manager +
+            "</div> " +
+            "<div class='row'> <b class='text-primary'>" + "contract:&nbsp&nbsp </b>" +
+            campaignAddress + 
+            "</div> </div>" +
             "</td><td>" +
             min +
-            "wei" +
+            "&nbsp;wei" +
             "</td><td>" +
             "<a href='campaign.html?address=" +
             campaignAddress +
@@ -238,9 +243,11 @@
         <div class="container">
           <h1 class="display-4">Smart Contract and Campaign</h1>
           <p class="lead">
-          start your new campaign with Etherum smart contract
+            start your new campaign with Etherum smart contract
           </p>
-          <small class="text-muted">Current Account: <a id="address"></a> </small>
+          <small class="text-muted"
+            >Current Account: <a id="address"></a>
+          </small>
         </div>
       </div>
 
@@ -279,7 +286,7 @@
         aria-labelledby="exampleModalLabel"
         aria-hidden="true"
       >
-        <div class="modal-dialog" role="document">
+        <div class="modal-dialog modal-dialog-centered" role="document">
           <div class="modal-content">
             <div class="modal-header">
               <h5 class="modal-title" id="exampleModalLabel">
@@ -295,11 +302,20 @@
               </button>
             </div>
             <div class="modal-body">
-              <input
-                type="input"
-                id="minimumAmount"
-                placeholder="Enter minimum"
-              />
+              <div class="form-group">
+                <label for="minimumAmount">Minimum Contribution Rate</label>
+                <input
+                  type="email"
+                  class="form-control"
+                  id="minimumAmount"
+                  aria-describedby="minimumHelp"
+                  placeholder="Enter wei"
+                />
+                <small id="minimumHelp" class="form-text text-muted"
+                  >contributor will has to pay atleast this amount to join the
+                  campaign</small
+                >
+              </div>
             </div>
             <div class="modal-footer">
               <button
@@ -311,7 +327,7 @@
               </button>
               <button
                 type="button"
-                class="btn btn-primary"
+                class="btn btn-success"
                 onclick="createCampaign()"
               >
                 Create
@@ -340,7 +356,6 @@
       background-position: center center;
       background-repeat: no-repeat;
       background-size: cover;
-
     }
 
     .table-wrapper {
@@ -374,7 +389,7 @@
       float: right;
       height: 30px;
       font-weight: bold;
-      font-size: 12px;
+      font-size: 15px;
       text-shadow: none;
       min-width: 100px;
       border-radius: 50px;
