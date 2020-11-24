@@ -134,6 +134,9 @@
         document.getElementById("manager").innerHTML = manager;
         min = await campaign.methods.minimumContribution().call();
         document.getElementById("minimumContribution").innerHTML = min;
+        bal = await web3.eth.getBalance(campaignAddress);
+        document.getElementById("balance").innerHTML = bal;
+
         getRequest();
       };
 
@@ -251,7 +254,7 @@
               </p>
               <p class="text-warning">Manager Address: <a id="manager"></a></p>
               <p class="text-primary">
-                Minimum contribution: <a id="minimumContribution"></a>
+                Campaign balance: <a id="balance"></a>
               </p>
             </div>
             <div class="col-6">
@@ -265,12 +268,16 @@
                 >
                   <h3 class="card-title">Contribute</h3>
                   <p class="card-text">Become this campaign contributor.</p>
+                  <small class="card-text">
+                    Minimum contribution: <a id="minimumContribution"></a>
+                    &nbspwei </small>
 
                   <div class="input-group mb-3">
                     <input
                       type="text"
                       class="form-control"
-                      placeholder="wei"
+                      placeholder="ether"
+                      id="amount"
                       aria-describedby="button-addon"
                     />
                     <div class="input-group-append">
