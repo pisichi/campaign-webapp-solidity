@@ -22,14 +22,17 @@
 
     <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
 
-    <!-- FontAwesome -->
+    <!-- Icons -->
     <link
       rel="stylesheet"
       href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"
     />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/icon?family=Material+Icons"
+    />
 
     <script>
-      const address = "0xC89B7aEcfEfA090bee0955eB0EFee494231d6Bd0";
       const web3 = new Web3(Web3.givenProvider);
 
       window.addEventListener("load", async () => {
@@ -61,6 +64,13 @@
           inputs: [{ internalType: "address", name: "", type: "address" }],
           name: "approvers",
           outputs: [{ internalType: "bool", name: "", type: "bool" }],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [],
+          name: "approversCount",
+          outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
           stateMutability: "view",
           type: "function",
         },
@@ -129,20 +139,67 @@
       }
 
       var manager;
-      getManager = async () => {
+      var IsContributor;
+      var IsManager;
+
+      init = async () => {
         manager = await campaign.methods.manager().call();
         document.getElementById("manager").innerHTML = manager;
         min = await campaign.methods.minimumContribution().call();
-        document.getElementById("minimumContribution").innerHTML = min;
+        document.getElementById(
+          "minimumContribution"
+        ).innerHTML = web3.utils.fromWei(min, "ether");
         bal = await web3.eth.getBalance(campaignAddress);
-        document.getElementById("balance").innerHTML = bal;
+        document.getElementById("balance").innerHTML = web3.utils.fromWei(
+          bal,
+          "ether"
+        );
+
+        contributorCount = await campaign.methods.approversCount().call({
+          from: accounts[0],
+        });
+
+        $('#bg').css( 'background-image', 'url(./image/bg-1.jpg)');
+
+        document.getElementById("conCount").innerHTML = contributorCount;
+        document.getElementById("conMes").innerHTML =
+          "Contribute to this campaign";
+        document.getElementById("greet").innerHTML = "Campaign";
+        document.getElementById("greetDesc").innerHTML =
+          "Contribute to join this campaign";
+
+        IsContributor = await campaign.methods.approvers(accounts[0]).call({
+          from: accounts[0],
+        });
+
+        if (IsContributor) {
+          $('#bg').css( 'background-image', 'url(./image/bg-2.jpg)');
+          document.getElementById("greet").innerHTML =
+            "Welcome back Contributor";
+          document.getElementById("greetDesc").innerHTML =
+            "You can now approve this campaign's requests";
+          document.getElementById("conMes").innerHTML = "Contribute some more";
+        }
+
+        if (manager == accounts[0]) {
+          $('#bg').css( 'background-image', 'url(./image/bg-0.png)');
+          IsManager = true;
+          document.getElementById("requestButton").innerHTML =
+            '<button type="button" class="btn btn-primary add-new" data-toggle="modal" data-target="#exampleModal"> <i class="fa fa-plus"></i> Create new Request </button>';
+          document.getElementById("greet").innerHTML =
+            "Welcome back manager";
+          document.getElementById("greetDesc").innerHTML =
+            "Create or finalize request";
+        }
+
+        console.log("manager:" + IsManager + " | contributor:" + IsContributor);
 
         getRequest();
       };
 
       getRequest = async () => {
-        let element =
-          "<table class='table'><thead class='thead-dark'><th>Index</th><th>Description</th><th>Amount</th><th>Status</th><th>Approval Count</th><th>Recipient</th><th>Action</th></tr></thead>";
+        let table =
+          "<table class='table'><thead class='thead-dark'><th>No.</th><th>Description</th><th>Amount</th><th>Status</th><th>Approval Count</th><th>Recipient</th><th>Action</th></tr></thead>";
         let index = 0;
 
         while (true) {
@@ -152,22 +209,38 @@
             console.log(re.description);
 
             let status;
+            let approveButton = "";
+            let finalizeButton = "";
             if (re.complete) {
               status =
-                "<div class = 'row align-items-center'><h1 class='status text-primary'>&bull;&nbsp;</h1> Complete </div>";
+                "<div class = 'row align-items-center'><h1 class='status text-success'>&bull;&nbsp;</h1> Complete </div>";
             } else {
               status =
-                "<div class = 'row align-items-center'><h1 class='status text-success'>&bull;&nbsp;</h1> Active</div>";
+                "<div class = 'row align-items-center'><h1 class='status text-primary'>&bull;&nbsp;</h1> Active</div>";
             }
 
-            element +=
+            if (IsContributor) {
+              approveButton =
+                '<button type="button" class="btn btn-primary btn-sm mx-1" onclick="approve(' +
+                index +
+                ')">approve</button>';
+            }
+
+            if (IsManager) {
+              finalizeButton =
+                '<button type="button" class="btn btn-success btn-sm mx-1" onclick="finalize(' +
+                index +
+                ')">finalize</button>';
+            }
+
+            table +=
               "<tr><td class='align-middle text-center'>" +
-              index +
+              (index + 1) +
               "</td><td class='align-middle'>" +
               re.description +
               "</td><td class='align-middle'>" +
-              re.amount +
-              "&nbspwei" +
+              web3.utils.fromWei(re.amount, "ether") +
+              "&nbspether" +
               "</td><td class='align-middle'>" +
               status +
               "</td><td class='align-middle text-center'>" +
@@ -175,43 +248,57 @@
               "</td><td class='align-middle'>" +
               re.recipient +
               "</td><td class='align-middle'>" +
-              '<button type="button" class="btn btn-primary btn-sm mx-1" onclick="approve(' +
-              index +
-              ')">approve</button>' +
-              '<button type="button" class="btn btn-success btn-sm mx-1" onclick="finalize(' +
-              index +
-              ')">finalize</button>' +
+              approveButton +
+              finalizeButton +
               "</td></tr>";
             index += 1;
           } catch (e) {
             break;
           }
         }
-        element += "</table>";
-        document.getElementById("request").innerHTML = element;
+        table += "</table>";
+        document.getElementById("request").innerHTML = table;
       };
 
       contribute = async () => {
-        amount = document.getElementById("amount").value;
-        const accounts = await web3.eth.getAccounts();
-        await campaign.methods.contribute().send({
-          from: accounts[0],
-          value: web3.utils.toWei(amount, "ether"),
-          gas: 1000000,
-        });
+        try {
+          amount = document.getElementById("amount").value;
+          const accounts = await web3.eth.getAccounts();
+
+          await campaign.methods.contribute().send({
+            from: accounts[0],
+            value: web3.utils.toWei(amount, "ether"),
+            gas: 1000000,
+          });
+        } catch (e) {
+          document.getElementById("error").innerHTML =
+            "The value must be number or did not meet the minimal amount";
+          $("#errModal").modal();
+        }
+        init();
       };
 
       createRequest = async () => {
         //string memory description, uint amount, address recipient
-        desc = document.getElementById("description").value;
-        cona = document.getElementById("conamount").value;
-        addr = document.getElementById("address").value;
-        const accounts = await web3.eth.getAccounts();
+        try {
+          desc = document.getElementById("description").value;
+          cona = web3.utils.toWei(
+            document.getElementById("conamount").value,
+            "ether"
+          );
+          addr = document.getElementById("address").value;
+          const accounts = await web3.eth.getAccounts();
 
-        await campaign.methods.createRequest(desc, cona, addr).send({
-          from: accounts[0],
-          gas: 1000000,
-        });
+          await campaign.methods.createRequest(desc, cona, addr).send({
+            from: accounts[0],
+            gas: 1000000,
+          });
+        } catch (e) {
+          document.getElementById("error").innerHTML =
+            "Please check your inputs";
+          $("#errModal").modal();
+        }
+        init();
       };
 
       approve = async (index) => {
@@ -219,20 +306,28 @@
           .approveRequest(index)
           .send({ from: accounts[0], gas: 400000 });
         console.log("approve call from index:" + index);
+        init();
       };
 
       finalize = async (index) => {
-        await campaign.methods
-          .finalizeRequest(index)
-          .send({ from: accounts[0], gas: 400000 });
-        console.log("call from index:" + index);
+        try {
+          await campaign.methods
+            .finalizeRequest(index)
+            .send({ from: accounts[0], gas: 400000 });
+          console.log("call from index:" + index);
+        } catch (e) {
+          document.getElementById("error").innerHTML =
+            "This request cannot be finalize";
+          $("#errModal").modal();
+        }
+        init();
       };
     </script>
   </head>
 
   <body onload="getAccounts()">
     <script>
-      getManager();
+      init();
     </script>
 
     <nav class="navbar navbar-dark bg-dark text-white">
@@ -240,22 +335,21 @@
     </nav>
     <div class="container-fluid">
       <div
+        id="bg"
         class="jumbotron jumbotron-fluid text-white jumbotron-image shadow"
-        style="
-          background-image: url(https://cdn.hipwallpaper.com/i/73/90/9Yk32U.jpg);
-        "
       >
         <div class="container">
           <div class="row">
             <div class="col-6">
-              <h1 class="display-4">Campaign</h1>
-              <p class="lead">
+              <h1 class="display-4" id="greet"></h1>
+              <p class="lead" id="greetDesc">
                 Contribute to this campaign or create new requrest
               </p>
-              <p class="text-warning">Manager Address: <a id="manager"></a></p>
-              <p class="text-primary">
-                Campaign balance: <a id="balance"></a>
+              <p class="text-warning">Manager: <a id="manager"></a></p>
+              <p class="text-warning">
+                Campaign balance: <a id="balance"></a> ether
               </p>
+              <p class="text-success">Contributor(s) : <a id="conCount"></a></p>
             </div>
             <div class="col-6">
               <div class="card-transparent ml-auto" style="width: 18rem">
@@ -267,10 +361,13 @@
                   "
                 >
                   <h3 class="card-title">Contribute</h3>
-                  <p class="card-text">Become this campaign contributor.</p>
+                  <p class="card-text">
+                    <a id="conMes"></a>
+                  </p>
                   <small class="card-text">
-                    Minimum contribution: <a id="minimumContribution"></a>
-                    &nbspwei </small>
+                    Minimum contribution:
+                    <a id="minimumContribution"></a> &nbspether
+                  </small>
 
                   <div class="input-group mb-3">
                     <input
@@ -287,7 +384,7 @@
                         id="button-addon"
                         onclick="contribute()"
                       >
-                        <b> confirm</b>
+                        <b> confirm </b>
                       </button>
                     </div>
                   </div>
@@ -306,16 +403,7 @@
                 <div class="col-sm-8">
                   <h2><b>Request</b> Lists</h2>
                 </div>
-                <div class="col-sm-4">
-                  <button
-                    type="button"
-                    class="btn btn-primary add-new"
-                    data-toggle="modal"
-                    data-target="#exampleModal"
-                  >
-                    <i class="fa fa-plus"></i> Create new Request
-                  </button>
-                </div>
+                <div class="col-sm-4" id="requestButton"></div>
               </div>
             </div>
             <div class="row">
@@ -324,6 +412,8 @@
           </div>
         </div>
       </div>
+
+      <!-- Modal-->
 
       <div
         class="modal fade"
@@ -370,7 +460,7 @@
                   class="form-control"
                   id="conamount"
                   aria-describedby="conamountHelp"
-                  placeholder="amount (wei)"
+                  placeholder="amount (ether)"
                 />
                 <small id="conamountHelp" class="form-text text-muted"
                   >how much do you want from this request</small
@@ -400,9 +490,39 @@
               <button
                 type="button"
                 class="btn btn-success"
+                data-dismiss="modal"
                 onclick="createRequest()"
               >
                 Create
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="errModal" class="modal fade">
+        <div class="modal-dialog modal-confirm">
+          <div class="modal-content">
+            <div class="modal-header">
+              <div class="row justify-content-center">
+                <div class="icon-box">
+                  <i class="material-icons">&#xE5CD;</i>
+                </div>
+                <button
+                  type="button"
+                  class="close"
+                  data-dismiss="modal"
+                  aria-hidden="true"
+                >
+                  &times;
+                </button>
+              </div>
+            </div>
+            <div class="modal-body text-center">
+              <h4>Error!</h4>
+              <p id="error"></p>
+              <button class="btn btn-success" data-dismiss="modal">
+                Close
               </button>
             </div>
           </div>
@@ -466,6 +586,87 @@
       min-width: 100px;
       border-radius: 50px;
       line-height: 13px;
+    }
+
+    .modal-confirm {
+      color: #434e65;
+      width: 525px;
+      margin: 30px auto;
+    }
+    .modal-confirm .modal-content {
+      padding: 20px;
+      font-size: 16px;
+      border-radius: 5px;
+      border: none;
+    }
+    .modal-confirm .modal-header {
+      background: #e85e6c;
+      border-bottom: none;
+      position: relative;
+      text-align: center;
+      margin: -20px -20px 0;
+      border-radius: 5px 5px 0 0;
+      padding: 35px;
+      justify-content: center;
+    }
+    .modal-confirm h4 {
+      text-align: center;
+      font-size: 36px;
+      margin: 10px 0;
+    }
+    .modal-confirm .form-control,
+    .modal-confirm .btn {
+      min-height: 40px;
+      border-radius: 3px;
+    }
+    .modal-confirm .close {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      color: #fff;
+      text-shadow: none;
+      opacity: 0.5;
+    }
+    .modal-confirm .close:hover {
+      opacity: 0.8;
+    }
+    .modal-confirm .icon-box {
+      color: #fff;
+      display: inline-block;
+      border-radius: 50%;
+      z-index: 9;
+      border: 5px solid #fff;
+      padding: 15px;
+      text-align: center;
+    }
+    .modal-confirm .icon-box i {
+      font-size: 58px;
+      margin: -2px 0 0 -2px;
+    }
+    .modal-confirm.modal-dialog {
+      margin-top: 80px;
+    }
+    .modal-confirm .btn {
+      color: #fff;
+      border-radius: 4px;
+      background: #eeb711;
+      text-decoration: none;
+      transition: all 0.4s;
+      line-height: normal;
+      border-radius: 30px;
+      margin-top: 10px;
+      padding: 6px 20px;
+      min-width: 150px;
+      border: none;
+    }
+    .modal-confirm .btn:hover,
+    .modal-confirm .btn:focus {
+      background: #eda645;
+      outline: none;
+    }
+    .trigger-btn {
+      display: inline-block;
+      margin: 100px auto;
     }
   </style>
 </html>

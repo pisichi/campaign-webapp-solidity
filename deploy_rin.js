@@ -5,8 +5,8 @@ const truffleURL = "https://rinkeby.infura.io/v3/873fe33a8f5b46d2819dbfbed46d180
 const HDWalletProvider = require("truffle-hdwallet-provider");
 const provider = new HDWalletProvider(mnemonic, truffleURL)
 const web3 = new Web3(provider);
-const bytecode = fs.readFileSync('./build/__contracts_campain_sol_CampaignFactory.bin');
-const abi = JSON.parse(fs.readFileSync('./build/__contracts_campain_sol_CampaignFactory.abi'));
+const bytecode = fs.readFileSync('./build/__contracts_campaign_sol_CampaignFactory.bin');
+const abi = JSON.parse(fs.readFileSync('./build/__contracts_campaign_sol_CampaignFactory.abi'));
 const deploy = async() => {
     accounts = await web3.eth.getAccounts()
     console.log("Trying to deploy from accounts ", accounts[0]);
@@ -18,9 +18,6 @@ const deploy = async() => {
                 from: accounts[0],
                 gas: '1000000'
             });
-    console.log('contract deployed to',factory.options.address);
-    const message = await 
-    factory.methods.message().call();
-    console.log(message);             
+    console.log('contract deployed to',factory.options.address);    
 };
 deploy();

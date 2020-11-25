@@ -22,14 +22,19 @@
 
     <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
 
-    <!-- FontAwesome -->
+    <!-- Icons -->
     <link
       rel="stylesheet"
       href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"
     />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/icon?family=Material+Icons"
+    />
 
     <script>
-      const address = "0xC89B7aEcfEfA090bee0955eB0EFee494231d6Bd0";
+      // const address = "0xC89B7aEcfEfA090bee0955eB0EFee494231d6Bd0";
+      const address = "0xEad69554bB999aC0BC75D7e9845d793cFe84882e";
       const web3 = new Web3(Web3.givenProvider);
 
       window.addEventListener("load", async () => {
@@ -99,6 +104,13 @@
         },
         {
           inputs: [],
+          name: "approversCount",
+          outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [],
           name: "contribute",
           outputs: [],
           stateMutability: "payable",
@@ -150,6 +162,7 @@
           type: "function",
         },
       ];
+      
       var campaignFactory = new web3.eth.Contract(abi, address);
       var accounts;
 
@@ -160,21 +173,26 @@
 
       createCampaign = async () => {
         let minimum = document.getElementById("minimumAmount").value;
-        if (minimum === "") {
-          return;
-        }
-        console.log(minimum);
-        accounts = await web3.eth.getAccounts();
-        await campaignFactory.methods.createCampaign(minimum).send({
-          from: accounts[0],
-          gas: "4000000",
-        });
-        const deployedCampaigns = await campaignFactory.methods
-          .getDeployedCampaigns()
-          .call({
+        try {
+          value = web3.utils.toWei(minimum, "ether");
+          console.log(value);
+          accounts = await web3.eth.getAccounts();
+          await campaignFactory.methods.createCampaign(value).send({
             from: accounts[0],
+            gas: "4000000",
           });
+          const deployedCampaigns = await campaignFactory.methods
+            .getDeployedCampaigns()
+            .call({
+              from: accounts[0],
+            });
+        } catch (e) {
+          document.getElementById("error").innerHTML =
+            "The value must be number";
+          $("#errModal").modal();
+        }
         console.log(deployedCampaigns);
+        getCampaign();
       };
 
       getCampaign = async () => {
@@ -185,17 +203,20 @@
             from: accounts[0],
           });
 
-        let element =
+        let table =
           "<table class='table'><thead class='thead-dark'><th>Index</th><th>Address</th><th>Minimum contrubution</th><th></th></tr></thead>";
         let index = 1;
 
         for (let campaignAddress of campaign) {
           campaign = await new web3.eth.Contract(abi2, campaignAddress);
 
-          min = await campaign.methods.minimumContribution().call();
+          min = web3.utils.fromWei(
+            await campaign.methods.minimumContribution().call(),
+            "ether"
+          );
           manager = await campaign.methods.manager().call();
 
-          element +=
+          table +=
             "<tr " +
             ' class="pop" data-container="body" data-toggle="tooltip" data-placement="top" title="' +
             "contract address: " +
@@ -203,23 +224,25 @@
             '"> <td >' +
             index +
             "</td><td>" +
-            "<div class='col'> <div class='row'> <b class='text-primary'>" + "manager:&nbsp </b>" +
+            "<div class='col'> <div class='row'> <b class='text-primary'>" +
+            "manager:&nbsp </b>" +
             manager +
             "</div> " +
-            "<div class='row'> <b class='text-primary'>" + "contract:&nbsp&nbsp </b>" +
-            campaignAddress + 
+            "<div class='row'> <b class='text-primary'>" +
+            "contract:&nbsp&nbsp </b>" +
+            campaignAddress +
             "</div> </div>" +
             "</td><td>" +
             min +
-            "&nbsp;wei" +
+            "&nbsp;ether" +
             "</td><td>" +
             "<a href='campaign.html?address=" +
             campaignAddress +
             "' class='btn btn-info tablebutton'> <i class='fa fa-eye'></i> View</a></td></tr>";
           index += 1;
         }
-        element += "</table>";
-        document.getElementById("campaign").innerHTML = element;
+        table += "</table>";
+        document.getElementById("campaign").innerHTML = table;
       };
     </script>
   </head>
@@ -309,7 +332,7 @@
                   class="form-control"
                   id="minimumAmount"
                   aria-describedby="minimumHelp"
-                  placeholder="Enter wei"
+                  placeholder="Enter ether"
                 />
                 <small id="minimumHelp" class="form-text text-muted"
                   >contributor will has to pay atleast this amount to join the
@@ -331,6 +354,35 @@
                 onclick="createCampaign()"
               >
                 Create
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="errModal" class="modal fade">
+        <div class="modal-dialog modal-confirm">
+          <div class="modal-content">
+            <div class="modal-header">
+              <div class="row justify-content-center">
+                <div class="icon-box">
+                  <i class="material-icons">&#xE5CD;</i>
+                </div>
+                <button
+                  type="button"
+                  class="close"
+                  data-dismiss="modal"
+                  aria-hidden="true"
+                >
+                  &times;
+                </button>
+              </div>
+            </div>
+            <div class="modal-body text-center">
+              <h4>Error!</h4>
+              <p id="error"></p>
+              <button class="btn btn-success" data-dismiss="modal">
+                Close
               </button>
             </div>
           </div>
@@ -394,6 +446,83 @@
       min-width: 100px;
       border-radius: 50px;
       line-height: 13px;
+    }
+
+    .modal-confirm {
+      color: #434e65;
+      width: 525px;
+      margin: 30px auto;
+    }
+    .modal-confirm .modal-content {
+      padding: 20px;
+      font-size: 16px;
+      border-radius: 5px;
+      border: none;
+    }
+    .modal-confirm .modal-header {
+      background: #e85e6c;
+      border-bottom: none;
+      position: relative;
+      text-align: center;
+      margin: -20px -20px 0;
+      border-radius: 5px 5px 0 0;
+      padding: 35px;
+      justify-content: center;
+    }
+    .modal-confirm h4 {
+      text-align: center;
+      font-size: 36px;
+      margin: 10px 0;
+    }
+    .modal-confirm .form-control,
+    .modal-confirm .btn {
+      min-height: 40px;
+      border-radius: 3px;
+    }
+    .modal-confirm .close {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      color: #fff;
+      text-shadow: none;
+      opacity: 0.5;
+    }
+    .modal-confirm .close:hover {
+      opacity: 0.8;
+    }
+    .modal-confirm .icon-box {
+      color: #fff;
+      display: inline-block;
+      border-radius: 50%;
+      z-index: 9;
+      border: 5px solid #fff;
+      padding: 15px;
+      text-align: center;
+    }
+    .modal-confirm .icon-box i {
+      font-size: 58px;
+      margin: -2px 0 0 -2px;
+    }
+    .modal-confirm.modal-dialog {
+      margin-top: 80px;
+    }
+    .modal-confirm .btn {
+      color: #fff;
+      border-radius: 4px;
+      background: #eeb711;
+      text-decoration: none;
+      transition: all 0.4s;
+      line-height: normal;
+      border-radius: 30px;
+      margin-top: 10px;
+      padding: 6px 20px;
+      min-width: 150px;
+      border: none;
+    }
+    .modal-confirm .btn:hover,
+    .modal-confirm .btn:focus {
+      background: #eda645;
+      outline: none;
     }
   </style>
 </html>
